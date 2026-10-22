@@ -1,0 +1,1319 @@
+openapi: 3.0.3
+info:
+  title: SoundPass API
+  version: 1.0.0
+  description: |
+    API REST de SoundPass, plataforma de conciertos y eventos musicales.
+
+    Niveles de acceso (campo `x-acceso` de cada operación):
+    - **PUBLICO**: sin token.
+    - **USUARIO**: requiere JWT de un usuario autenticado (rol USUARIO o ADMIN).
+    - **ADMIN**: requiere JWT con rol ADMIN.
+
+    Todos los errores usan el esquema `Error`.
+  license:
+    name: Proyecto académico - Bases de Datos 2
+servers:
+  - url: http://localhost:8080/api/v1
+    description: Desarrollo local
+tags:
+  - name: Autenticación
+    description: Registro e inicio de sesión
+  - name: Artistas
+    description: Catálogo de artistas
+  - name: Escenarios
+    description: Catálogo de escenarios
+  - name: Eventos
+    description: Eventos y artistas asignados
+  - name: Tipos de entrada
+    description: Tipos de entrada y disponibilidad
+  - name: Compras
+    description: Órdenes de compra y cancelaciones
+  - name: Entradas
+    description: Entradas del usuario y asistentes
+  - name: Check-in
+    description: Ingreso al evento
+  - name: Reseñas
+    description: Reseñas de eventos (MongoDB)
+  - name: Perfiles y detalle
+    description: Perfiles de artista y detalle de evento (MongoDB)
+
+security:
+  - bearerAuth: []
+
+paths:
+  /auth/registro:
+    post:
+      tags: [Autenticación]
+      operationId: registrarUsuario
+      summary: Registra un usuario con rol USUARIO
+      x-acceso: PUBLICO
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RegistroSolicitud' }
+      responses:
+        '201':
+          description: Usuario creado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Usuario' }
+        '409':
+          description: El correo ya está registrado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '422': { $ref: '#/components/responses/Validacion' }
+
+  /auth/login:
+    post:
+      tags: [Autenticación]
+      operationId: iniciarSesion
+      summary: Inicia sesión y devuelve un JWT
+      x-acceso: PUBLICO
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LoginSolicitud' }
+      responses:
+        '200':
+          description: Credenciales correctas
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TokenRespuesta' }
+        '401': { $ref: '#/components/responses/NoAutenticado' }
+        '422': { $ref: '#/components/responses/Validacion' }
+
+  /artistas:
+    get:
+      tags: [Artistas]
+      operationId: listarArtistas
+      summary: Lista artistas activos (paginado)
+      x-acceso: PUBLICO
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/Pagina'
+        - $ref: '#/components/parameters/Tamano'
+        - name: genero
+          in: query
+          schema: { type: string }
+        - name: pais
+          in: query
+          schema: { type: string }
+      responses:
+        '200':
+          description: Página de artistas
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PaginaArtistas' }
+        '422': { $ref: '#/components/responses/Validacion' }
+    post:
+      tags: [Artistas]
+      operationId: crearArtista
+      summary: Crea un artista
+      x-acceso: ADMIN
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ArtistaEntrada' }
+      responses:
+        '201':
+          description: Artista creado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Artista' }
+        '401': { $ref: '#/components/responses/NoAutenticado' }
+        '403': { $ref: '#/components/responses/Prohibido' }
+        '422': { $ref: '#/components/responses/Validacion' }
+
+  /artistas/{idArtista}:
+    parameters:
+      - $ref: '#/components/parameters/IdArtista'
+    get:
+      tags: [Artistas]
+      operationId: obtenerArtista
+      summary: Obtiene un artista activo
+      x-acceso: PUBLICO
+      security: []
+      responses:
+        '200':
+          description: Artista
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Artista' }
+        '404': { $ref: '#/components/responses/NoEncontrado' }
+    put:
+      tags: [Artistas]
+      operationId: actualizarArtista
+      summary: Actualiza un artista
+      x-acceso: ADMIN
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ArtistaEntrada' }
+      responses:
+        '200':
+          description: Artista actualizado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Artista' }
+        '401': { $ref: '#/components/responses/NoAutenticado' }
+        '403': { $ref: '#/components/responses/Prohibido' }
+        '404': { $ref: '#/components/responses/NoEncontrado' }
+        '422': { $ref: '#/components/responses/Validacion' }
+    delete:
+      tags: [Artistas]
+      operationId: desactivarArtista
+      summary: Borrado lógico del artista (activo=false)
+      x-acceso: ADMIN
+      responses:
+        '204': { description: Artista desactivado }
+        '401': { $ref: '#/components/responses/NoAutenticado' }
+        '403': { $ref: '#/components/responses/Prohibido' }
+        '404': { $ref: '#/components/responses/NoEncontrado' }
+
+  /escenarios:
+    get:
+      tags: [Escenarios]
+      operationId: listarEscenarios
+      summary: Lista escenarios activos (paginado)
+      x-acceso: PUBLICO
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/Pagina'
+        - $ref: '#/components/parameters/Tamano'
+        - name: ciudad
+          in: query
+          schema: { type: string }
+      responses:
+        '200':
+          description: Página de escenarios
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PaginaEscenarios' }
+        '422': { $ref: '#/components/responses/Validacion' }
+    post:
+      tags: [Escenarios]
+      operationId: crearEscenario
+      summary: Crea un escenario
+      x-acceso: ADMIN
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/EscenarioEntrada' }
+      responses:
+        '201':
+          description: Escenario creado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Escenario' }
+        '401': { $ref: '#/components/responses/NoAutenticado' }
+        '403': { $ref: '#/components/responses/Prohibido' }
+        '422': { $ref: '#/components/responses/Validacion' }
+
+  /escenarios/{idEscenario}:
+    parameters:
+      - $ref: '#/components/parameters/IdEscenario'
+    get:
+      tags: [Escenarios]
+      operationId: obtenerEscenario
+      summary: Obtiene un escenario activo
+      x-acceso: PUBLICO
+      security: []
+      responses:
+        '200':
+          description: Escenario
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Escenario' }
+        '404': { $ref: '#/components/responses/NoEncontrado' }
+    put:
+      tags: [Escenarios]
+      operationId: actualizarEscenario
+      summary: Actualiza un escenario
+      x-acceso: ADMIN
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/EscenarioEntrada' }
+      responses:
+        '200':
+          description: Escenario actualizado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Escenario' }
+        '401': { $ref: '#/components/responses/NoAutenticado' }
+        '403': { $ref: '#/components/responses/Prohibido' }
+        '404': { $ref: '#/components/responses/NoEncontrado' }
+        '422': { $ref: '#/components/responses/Validacion' }
+    delete:
+      tags: [Escenarios]
+      operationId: desactivarEscenario
+      summary: Borrado lógico del escenario (activo=false)
+      x-acceso: ADMIN
+      responses:
+        '204': { description: Escenario desactivado }
+        '401': { $ref: '#/components/responses/NoAutenticado' }
+        '403': { $ref: '#/components/responses/Prohibido' }
+        '404': { $ref: '#/components/responses/NoEncontrado' }
+
+  /eventos:
+    get:
+      tags: [Eventos]
+      operationId: listarEventos
+      summary: Lista eventos PUBLICADOS (paginado, con filtros)
+      x-acceso: PUBLICO
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/Pagina'
+        - $ref: '#/components/parameters/Tamano'
+        - name: desde
+          in: query
+          description: Eventos que empiezan en o después de esta fecha
+          schema: { type: string, format: date-time }
+        - name: hasta
+          in: query
+          description: Eventos que empiezan antes de esta fecha
+          schema: { type: string, format: date-time }
+        - name: ciudad
+          in: query
+          schema: { type: string }
+        - name: idArtista
+          in: query
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Página de eventos
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PaginaEventos' }
+        '422': { $ref: '#/components/responses/Validacion' }
+    post:
+      tags: [Eventos]
+      operationId: crearEvento
+      summary: Crea un evento en estado BORRADOR
+      description: Responde 409 si se solapa con otro evento no cancelado del mismo escenario (SQLSTATE 23P01).
+      x-acceso: ADMIN
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/EventoEntrada' }
+      responses:
+        '201':
+          description: Evento creado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Evento' }
+        '401': { $ref: '#/components/responses/NoAutenticado' }
+        '403': { $ref: '#/components/responses/Prohibido' }
+        '404': { $ref: '#/components/responses/NoEncontrado' }
+        '409': { $ref: '#/components/responses/Conflicto' }
+        '422': { $ref: '#/components/responses/Validacion' }
+
+  /eventos/{idEvento}:
+    parameters:
+      - $ref: '#/components/parameters/IdEvento'
+    get:
+      tags: [Eventos]
+      operationId: obtenerEvento
+      summary: Obtiene un evento con sus artistas y tipos de entrada
+      description: Los eventos que no están PUBLICADOS solo los ve un ADMIN; para los demás responde 404.
+      x-acceso: PUBLICO
+      security: []
+      responses:
+        '200':
+          description: Evento
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EventoDetalle' }
+        '404': { $ref: '#/components/responses/NoEncontrado' }
+    put:
+      tags: [Eventos]
+      operationId: actualizarEvento
+      summary: Actualiza o mueve un evento
+      description: Responde 409 si el nuevo horario se solapa en el escenario.
+      x-acceso: ADMIN
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/EventoEntrada' }
+      responses:
+        '200':
+          description: Evento actualizado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Evento' }
+        '401': { $ref: '#/components/responses/NoAutenticado' }
+        '403': { $ref: '#/components/responses/Prohibido' }
+        '404': { $ref: '#/components/responses/NoEncontrado' }
+        '409': { $ref: '#/components/responses/Conflicto' }
+        '422': { $ref: '#/components/responses/Validacion' }
+
+  /eventos/{idEvento}/estado:
+    parameters:
+      - $ref: '#/components/parameters/IdEvento'
+    patch:
+      tags: [Eventos]
+      operationId: cambiarEstadoEvento
+      summary: Cambia el estado del evento (publicar, cancelar, finalizar)
+      description: Es el borrado lógico del evento. Reactivar un evento CANCELADO puede devolver 409 por solapamiento.
+      x-acceso: ADMIN
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CambioEstadoEvento' }
+      responses:
+        '200':
+          description: Estado actualizado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Evento' }
+        '401': { $ref: '#/components/responses/NoAutenticado' }
+        '403': { $ref: '#/components/responses/Prohibido' }
+        '404': { $ref: '#/components/responses/NoEncontrado' }
+        '409': { $ref: '#/components/responses/Conflicto' }
+        '422': { $ref: '#/components/responses/Validacion' }
+
+  /eventos/{idEvento}/artistas/{idArtista}:
+    parameters:
+      - $ref: '#/components/parameters/IdEvento'
+      - $ref: '#/components/parameters/IdArtista'
+    put:
+      tags: [Eventos]
+      operationId: asignarArtistaAEvento
+      summary: Asigna un artista al evento o cambia su orden de presentación
+      x-acceso: ADMIN
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AsignacionArtista' }
+      responses:
+        '200':
+          description: Artista asignado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ArtistaEnEvento' }
+        '401': { $ref: '#/components/responses/NoAutenticado' }
+        '403': { $ref: '#/components/responses/Prohibido' }
+        '404': { $ref: '#/components/responses/NoEncontrado' }
+        '422': { $ref: '#/components/responses/Validacion' }
+    delete:
+      tags: [Eventos]
+      operationId: quitarArtistaDeEvento
+      summary: Quita al artista del evento
+      x-acceso: ADMIN
+      responses:
+        '204': { description: Artista quitado del evento }
+        '401': { $ref: '#/components/responses/NoAutenticado' }
+        '403': { $ref: '#/components/responses/Prohibido' }
+        '404': { $ref: '#/components/responses/NoEncontrado' }
+
+  /eventos/{idEvento}/tipos-entrada:
+    parameters:
+      - $ref: '#/components/parameters/IdEvento'
+    get:
+      tags: [Tipos de entrada]
+      operationId: listarTiposEntrada
+      summary: Lista los tipos de entrada del evento
+      x-acceso: PUBLICO
+      security: []
+      responses:
+        '200':
+          description: Tipos de entrada
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/TipoEntrada' }
+        '404': { $ref: '#/components/responses/NoEncontrado' }
+    post:
+      tags: [Tipos de entrada]
+      operationId: crearTipoEntrada
+      summary: Crea un tipo de entrada y genera sus entradas DISPONIBLES
+      description: En la misma transacción se crean tantas entradas como indique `cupo`.
+      x-acceso: ADMIN
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/TipoEntradaEntrada' }
+      responses:
+        '201':
+          description: Tipo de entrada creado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TipoEntrada' }
+        '401': { $ref: '#/components/responses/NoAutenticado' }
+        '403': { $ref: '#/components/responses/Prohibido' }
+        '404': { $ref: '#/components/responses/NoEncontrado' }
+        '409': { $ref: '#/components/responses/Conflicto' }
+        '422': { $ref: '#/components/responses/Validacion' }
+
+  /tipos-entrada/{idTipoEntrada}:
+    parameters:
+      - $ref: '#/components/parameters/IdTipoEntrada'
+    put:
+      tags: [Tipos de entrada]
+      operationId: actualizarTipoEntrada
+      summary: Actualiza nombre, precio o cupo de un tipo de entrada
+      description: |
+        No se puede reducir `cupo` por debajo de las entradas ya vendidas (409).
+        Si se aumenta, se generan las entradas adicionales. Un cambio de precio no afecta órdenes ya creadas.
+      x-acceso: ADMIN
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/TipoEntradaEntrada' }
+      responses:
+        '200':
+          description: Tipo de entrada actualizado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TipoEntrada' }
+        '401': { $ref: '#/components/responses/NoAutenticado' }
+        '403': { $ref: '#/components/responses/Prohibido' }
+        '404': { $ref: '#/components/responses/NoEncontrado' }
+        '409': { $ref: '#/components/responses/Conflicto' }
+        '422': { $ref: '#/components/responses/Validacion' }
+
+  /eventos/{idEvento}/disponibilidad:
+    parameters:
+      - $ref: '#/components/parameters/IdEvento'
+    get:
+      tags: [Tipos de entrada]
+      operationId: consultarDisponibilidad
+      summary: Entradas DISPONIBLES por tipo de entrada
+      x-acceso: PUBLICO
+      security: []
+      responses:
+        '200':
+          description: Disponibilidad
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Disponibilidad' }
+        '404': { $ref: '#/components/responses/NoEncontrado' }
+
+  /ordenes:
+    post:
+      tags: [Compras]
+      operationId: comprarEntradas
+      summary: Compra entradas (una transacción, idempotente)
+      description: |
+        Toma las entradas con `SELECT ... FOR UPDATE SKIP LOCKED`, copia el precio vigente a
+        `precioUnitario` y marca las entradas como VENDIDA. Si faltan entradas se revierte todo y responde 409.
+        Repetir la misma `claveIdempotencia` devuelve la orden existente (200) sin consumir más entradas.
+        Una orden no puede repetir el mismo tipo de entrada en dos líneas.
+      x-acceso: USUARIO
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CompraSolicitud' }
+      responses:
+        '200':
+          description: La clave ya existía; se devuelve la orden original
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Orden' }
+        '201':
+          description: Orden creada
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Orden' }
+        '401': { $ref: '#/components/responses/NoAutenticado' }
+        '404': { $ref: '#/components/responses/NoEncontrado' }
+        '409': { $ref: '#/components/responses/Conflicto' }
+        '422': { $ref: '#/components/responses/Validacion' }
+
+  /ordenes/mias:
+    get:
+      tags: [Compras]
+      operationId: listarMisOrdenes
+      summary: Órdenes del usuario autenticado, con su total
+      x-acceso: USUARIO
+      parameters:
+        - $ref: '#/components/parameters/Pagina'
+        - $ref: '#/components/parameters/Tamano'
+      responses:
+        '200':
+          description: Página de órdenes
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PaginaOrdenes' }
+        '401': { $ref: '#/components/responses/NoAutenticado' }
+        '422': { $ref: '#/components/responses/Validacion' }
+
+  /ordenes/{idOrden}:
+    parameters:
+      - $ref: '#/components/parameters/IdOrden'
+    get:
+      tags: [Compras]
+      operationId: obtenerMiOrden
+      summary: Obtiene una orden propia
+      description: Si la orden es de otro usuario responde 404.
+      x-acceso: USUARIO
+      responses:
+        '200':
+          description: Orden
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Orden' }
+        '401': { $ref: '#/components/responses/NoAutenticado' }
+        '404': { $ref: '#/components/responses/NoEncontrado' }
+
+  /ordenes/{idOrden}/cancelacion:
+    parameters:
+      - $ref: '#/components/parameters/IdOrden'
+    post:
+      tags: [Compras]
+      operationId: cancelarOrden
+      summary: Cancela una orden propia y reembolsa
+      description: |
+        Las entradas VENDIDA pasan a CANCELADA. La orden queda REEMBOLSADA si estaba PAGADA y
+        CANCELADA si estaba PENDIENTE. Responde 409 si alguna entrada está USADA o la orden ya fue cancelada.
+        Si la orden es de otro usuario responde 404.
+      x-acceso: USUARIO
+      responses:
+        '200':
+          description: Orden cancelada
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Orden' }
+        '401': { $ref: '#/components/responses/NoAutenticado' }
+        '404': { $ref: '#/components/responses/NoEncontrado' }
+        '409': { $ref: '#/components/responses/Conflicto' }
+
+  /entradas/mias:
+    get:
+      tags: [Entradas]
+      operationId: listarMisEntradas
+      summary: Entradas del usuario autenticado (con código UUID)
+      x-acceso: USUARIO
+      parameters:
+        - $ref: '#/components/parameters/Pagina'
+        - $ref: '#/components/parameters/Tamano'
+        - name: estado
+          in: query
+          schema: { $ref: '#/components/schemas/EstadoEntrada' }
+      responses:
+        '200':
+          description: Página de entradas
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PaginaEntradas' }
+        '401': { $ref: '#/components/responses/NoAutenticado' }
+        '422': { $ref: '#/components/responses/Validacion' }
+
+  /entradas/{idEntrada}/asistente:
+    parameters:
+      - $ref: '#/components/parameters/IdEntrada'
+    put:
+      tags: [Entradas]
+      operationId: registrarAsistente
+      summary: Registra al asistente de una entrada propia
+      description: |
+        El asistente se identifica por el id de su entrada. Si la entrada ya tiene asistente responde 409.
+        Solo aplica a entradas VENDIDA de una orden del usuario.
+      x-acceso: USUARIO
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AsistenteEntrada' }
+      responses:
+        '201':
+          description: Asistente registrado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Asistente' }
+        '401': { $ref: '#/components/responses/NoAutenticado' }
+        '404': { $ref: '#/components/responses/NoEncontrado' }
+        '409': { $ref: '#/components/responses/Conflicto' }
+        '422': { $ref: '#/components/responses/Validacion' }
+
+  /checkins:
+    post:
+      tags: [Check-in]
+      operationId: hacerCheckin
+      summary: Check-in por código de entrada
+      description: |
+        La entrada pasa a USADA y se guarda `fechaCheckin`. Responde 409 si la entrada ya fue usada,
+        está CANCELADA o su evento no está PUBLICADO. Responde 404 si el código no existe.
+      x-acceso: ADMIN
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CheckinSolicitud' }
+      responses:
+        '200':
+          description: Check-in realizado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CheckinRespuesta' }
+        '401': { $ref: '#/components/responses/NoAutenticado' }
+        '403': { $ref: '#/components/responses/Prohibido' }
+        '404': { $ref: '#/components/responses/NoEncontrado' }
+        '409': { $ref: '#/components/responses/Conflicto' }
+        '422': { $ref: '#/components/responses/Validacion' }
+
+  /eventos/{idEvento}/resenas:
+    parameters:
+      - $ref: '#/components/parameters/IdEvento'
+    get:
+      tags: [Reseñas]
+      operationId: listarResenas
+      summary: Lista las reseñas del evento (más recientes primero)
+      x-acceso: PUBLICO
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/Pagina'
+        - $ref: '#/components/parameters/Tamano'
+      responses:
+        '503': { $ref: '#/components/responses/NoDisponible' }
+        '200':
+          description: Página de reseñas
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PaginaResenas' }
+        '404': { $ref: '#/components/responses/NoEncontrado' }
+        '422': { $ref: '#/components/responses/Validacion' }
+    post:
+      tags: [Reseñas]
+      operationId: crearResena
+      summary: Crea la reseña del usuario para el evento
+      description: |
+        Requiere que el usuario tenga una entrada USADA del evento (validado en PostgreSQL, responde 403 si no).
+        Una reseña por usuario y evento (409 si ya existe).
+      x-acceso: USUARIO
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ResenaEntrada' }
+      responses:
+        '503': { $ref: '#/components/responses/NoDisponible' }
+        '201':
+          description: Reseña creada
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Resena' }
+        '401': { $ref: '#/components/responses/NoAutenticado' }
+        '403': { $ref: '#/components/responses/Prohibido' }
+        '404': { $ref: '#/components/responses/NoEncontrado' }
+        '409': { $ref: '#/components/responses/Conflicto' }
+        '422': { $ref: '#/components/responses/Validacion' }
+
+  /eventos/{idEvento}/resenas/resumen:
+    parameters:
+      - $ref: '#/components/parameters/IdEvento'
+    get:
+      tags: [Reseñas]
+      operationId: resumenResenas
+      summary: Promedio y conteo de calificaciones del evento
+      x-acceso: PUBLICO
+      security: []
+      responses:
+        '503': { $ref: '#/components/responses/NoDisponible' }
+        '200':
+          description: Resumen
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ResumenResenas' }
+        '404': { $ref: '#/components/responses/NoEncontrado' }
+
+  /artistas/{idArtista}/perfil:
+    parameters:
+      - $ref: '#/components/parameters/IdArtista'
+    get:
+      tags: [Perfiles y detalle]
+      operationId: obtenerPerfilArtista
+      summary: Perfil ampliado del artista (MongoDB)
+      description: Si no existe documento responde 404; el catálogo de artistas funciona igual.
+      x-acceso: PUBLICO
+      security: []
+      responses:
+        '503': { $ref: '#/components/responses/NoDisponible' }
+        '200':
+          description: Perfil
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PerfilArtista' }
+        '404': { $ref: '#/components/responses/NoEncontrado' }
+    put:
+      tags: [Perfiles y detalle]
+      operationId: guardarPerfilArtista
+      summary: Crea o reemplaza el perfil del artista
+      x-acceso: ADMIN
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PerfilArtistaEntrada' }
+      responses:
+        '503': { $ref: '#/components/responses/NoDisponible' }
+        '200':
+          description: Perfil guardado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PerfilArtista' }
+        '401': { $ref: '#/components/responses/NoAutenticado' }
+        '403': { $ref: '#/components/responses/Prohibido' }
+        '404': { $ref: '#/components/responses/NoEncontrado' }
+        '422': { $ref: '#/components/responses/Validacion' }
+
+  /eventos/{idEvento}/detalle:
+    parameters:
+      - $ref: '#/components/parameters/IdEvento'
+    get:
+      tags: [Perfiles y detalle]
+      operationId: obtenerDetalleEvento
+      summary: Detalle ampliado del evento (MongoDB)
+      description: Si no existe documento responde 404; el catálogo de eventos funciona igual.
+      x-acceso: PUBLICO
+      security: []
+      responses:
+        '503': { $ref: '#/components/responses/NoDisponible' }
+        '200':
+          description: Detalle
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DetalleEvento' }
+        '404': { $ref: '#/components/responses/NoEncontrado' }
+    put:
+      tags: [Perfiles y detalle]
+      operationId: guardarDetalleEvento
+      summary: Crea o reemplaza el detalle del evento
+      x-acceso: ADMIN
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/DetalleEventoEntrada' }
+      responses:
+        '503': { $ref: '#/components/responses/NoDisponible' }
+        '200':
+          description: Detalle guardado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DetalleEvento' }
+        '401': { $ref: '#/components/responses/NoAutenticado' }
+        '403': { $ref: '#/components/responses/Prohibido' }
+        '404': { $ref: '#/components/responses/NoEncontrado' }
+        '422': { $ref: '#/components/responses/Validacion' }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    Pagina:
+      name: pagina
+      in: query
+      description: Número de página, desde 0
+      schema: { type: integer, minimum: 0, default: 0 }
+    Tamano:
+      name: tamano
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+    IdArtista:
+      name: idArtista
+      in: path
+      required: true
+      schema: { type: integer }
+    IdEscenario:
+      name: idEscenario
+      in: path
+      required: true
+      schema: { type: integer }
+    IdEvento:
+      name: idEvento
+      in: path
+      required: true
+      schema: { type: integer }
+    IdTipoEntrada:
+      name: idTipoEntrada
+      in: path
+      required: true
+      schema: { type: integer }
+    IdOrden:
+      name: idOrden
+      in: path
+      required: true
+      schema: { type: integer }
+    IdEntrada:
+      name: idEntrada
+      in: path
+      required: true
+      schema: { type: integer }
+
+  responses:
+    Validacion:
+      description: Datos de entrada inválidos
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    NoAutenticado:
+      description: Falta el token, es inválido o las credenciales son incorrectas
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Prohibido:
+      description: El rol o la propiedad del recurso no permiten la operación
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    NoEncontrado:
+      description: El recurso no existe (o no es visible para el solicitante)
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    NoDisponible:
+      description: |
+        MongoDB no responde (reseñas, perfiles y detalles). El catálogo, la compra y el resto de la API
+        siguen funcionando porque PostgreSQL es la fuente de verdad.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Conflicto:
+      description: |
+        Conflicto de negocio: solapamiento de escenario (`SOLAPAMIENTO_ESCENARIO`), entradas agotadas
+        (`ENTRADAS_AGOTADAS`), transición de estado inválida (`TRANSICION_INVALIDA`), cupo menor que las
+        entradas vendidas (`CUPO_INSUFICIENTE`) o dato duplicado (`DUPLICADO`).
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+
+  schemas:
+    Error:
+      type: object
+      description: Estructura única de error de toda la API
+      required: [estado, codigo, mensaje, fecha, ruta]
+      properties:
+        estado:
+          type: integer
+          description: Código HTTP
+          example: 409
+        codigo:
+          type: string
+          description: Código estable para el cliente
+          enum:
+            - VALIDACION
+            - NO_AUTENTICADO
+            - PROHIBIDO
+            - NO_ENCONTRADO
+            - SOLAPAMIENTO_ESCENARIO
+            - ENTRADAS_AGOTADAS
+            - TRANSICION_INVALIDA
+            - CUPO_INSUFICIENTE
+            - DUPLICADO
+            - ERROR_INTERNO
+          example: SOLAPAMIENTO_ESCENARIO
+        mensaje:
+          type: string
+          example: El escenario ya tiene un evento en ese horario
+        fecha:
+          type: string
+          format: date-time
+        ruta:
+          type: string
+          example: /api/v1/eventos
+        detalles:
+          type: array
+          description: Errores por campo (solo en 422)
+          items:
+            type: object
+            required: [campo, mensaje]
+            properties:
+              campo: { type: string, example: capacidad }
+              mensaje: { type: string, example: debe ser mayor que 0 }
+
+    RegistroSolicitud:
+      type: object
+      required: [nombre, correo, contrasena]
+      properties:
+        nombre: { type: string, minLength: 1, maxLength: 100 }
+        correo: { type: string, format: email, maxLength: 150 }
+        contrasena: { type: string, format: password, minLength: 8, maxLength: 72 }
+    LoginSolicitud:
+      type: object
+      required: [correo, contrasena]
+      properties:
+        correo: { type: string, format: email }
+        contrasena: { type: string, format: password }
+    TokenRespuesta:
+      type: object
+      required: [token, tipo, expiraEn, usuario]
+      properties:
+        token: { type: string }
+        tipo: { type: string, example: Bearer }
+        expiraEn: { type: string, format: date-time }
+        usuario: { $ref: '#/components/schemas/Usuario' }
+    Usuario:
+      type: object
+      required: [idUsuario, nombre, correo, rol]
+      properties:
+        idUsuario: { type: integer }
+        nombre: { type: string }
+        correo: { type: string, format: email }
+        rol: { type: string, enum: [USUARIO, ADMIN] }
+
+    ArtistaEntrada:
+      type: object
+      required: [nombreArtistico]
+      properties:
+        nombreArtistico: { type: string, minLength: 1, maxLength: 100 }
+        pais: { type: string, maxLength: 60 }
+        genero: { type: string, maxLength: 60 }
+    Artista:
+      allOf:
+        - $ref: '#/components/schemas/ArtistaEntrada'
+        - type: object
+          required: [idArtista]
+          properties:
+            idArtista: { type: integer }
+
+    EscenarioEntrada:
+      type: object
+      required: [nombre, ciudad, capacidad]
+      properties:
+        nombre: { type: string, minLength: 1, maxLength: 100 }
+        ciudad: { type: string, minLength: 1, maxLength: 80 }
+        direccion: { type: string, maxLength: 200 }
+        capacidad: { type: integer, minimum: 1 }
+    Escenario:
+      allOf:
+        - $ref: '#/components/schemas/EscenarioEntrada'
+        - type: object
+          required: [idEscenario]
+          properties:
+            idEscenario: { type: integer }
+
+    EstadoEvento:
+      type: string
+      enum: [BORRADOR, PUBLICADO, CANCELADO, FINALIZADO]
+    EventoEntrada:
+      type: object
+      required: [idEscenario, nombre, fechaInicio, fechaFin]
+      properties:
+        idEscenario: { type: integer }
+        nombre: { type: string, minLength: 1, maxLength: 150 }
+        fechaInicio: { type: string, format: date-time }
+        fechaFin:
+          type: string
+          format: date-time
+          description: Debe ser posterior a `fechaInicio`
+    Evento:
+      allOf:
+        - $ref: '#/components/schemas/EventoEntrada'
+        - type: object
+          required: [idEvento, estado]
+          properties:
+            idEvento: { type: integer }
+            estado: { $ref: '#/components/schemas/EstadoEvento' }
+    EventoDetalle:
+      allOf:
+        - $ref: '#/components/schemas/Evento'
+        - type: object
+          properties:
+            escenario: { $ref: '#/components/schemas/Escenario' }
+            artistas:
+              type: array
+              items: { $ref: '#/components/schemas/ArtistaEnEvento' }
+            tiposEntrada:
+              type: array
+              items: { $ref: '#/components/schemas/TipoEntrada' }
+    CambioEstadoEvento:
+      type: object
+      required: [estado]
+      properties:
+        estado: { $ref: '#/components/schemas/EstadoEvento' }
+    AsignacionArtista:
+      type: object
+      properties:
+        ordenPresentacion: { type: integer, minimum: 1, default: 1 }
+    ArtistaEnEvento:
+      type: object
+      required: [idArtista, nombreArtistico, ordenPresentacion]
+      properties:
+        idArtista: { type: integer }
+        nombreArtistico: { type: string }
+        ordenPresentacion: { type: integer, minimum: 1 }
+
+    TipoEntradaEntrada:
+      type: object
+      required: [nombre, precio, cupo]
+      properties:
+        nombre: { type: string, minLength: 1, maxLength: 60 }
+        precio: { type: number, format: decimal, minimum: 0, example: 150000.00 }
+        cupo: { type: integer, minimum: 1, maximum: 100000 }
+    TipoEntrada:
+      allOf:
+        - $ref: '#/components/schemas/TipoEntradaEntrada'
+        - type: object
+          required: [idTipoEntrada, idEvento]
+          properties:
+            idTipoEntrada: { type: integer }
+            idEvento: { type: integer }
+    Disponibilidad:
+      type: object
+      required: [idTipoEntrada, nombre, precio, cupo, disponibles]
+      properties:
+        idTipoEntrada: { type: integer }
+        nombre: { type: string }
+        precio: { type: number, format: decimal }
+        cupo: { type: integer }
+        disponibles: { type: integer, minimum: 0 }
+
+    LineaCompra:
+      type: object
+      required: [idTipoEntrada, cantidad]
+      properties:
+        idTipoEntrada: { type: integer }
+        cantidad: { type: integer, minimum: 1 }
+    CompraSolicitud:
+      type: object
+      required: [claveIdempotencia, lineas]
+      properties:
+        claveIdempotencia:
+          type: string
+          minLength: 1
+          maxLength: 64
+          description: Clave única generada por el cliente (p. ej. un UUID)
+        lineas:
+          type: array
+          minItems: 1
+          description: No puede repetir `idTipoEntrada`
+          items: { $ref: '#/components/schemas/LineaCompra' }
+    EstadoOrden:
+      type: string
+      enum: [PENDIENTE, PAGADA, CANCELADA, REEMBOLSADA]
+    DetalleCompra:
+      type: object
+      description: Se identifica por (orden, idTipoEntrada); no tiene id de línea.
+      required: [idTipoEntrada, cantidad, precioUnitario, subtotal]
+      properties:
+        idTipoEntrada: { type: integer }
+        cantidad: { type: integer, minimum: 1 }
+        precioUnitario:
+          type: number
+          format: decimal
+          description: Precio del tipo de entrada al momento de la compra
+        subtotal:
+          type: number
+          format: decimal
+          readOnly: true
+          description: cantidad * precioUnitario
+    Orden:
+      type: object
+      required: [idOrden, fecha, estado, total, detalles]
+      properties:
+        idOrden: { type: integer }
+        fecha: { type: string, format: date-time }
+        estado: { $ref: '#/components/schemas/EstadoOrden' }
+        total:
+          type: number
+          format: decimal
+          readOnly: true
+          description: Suma de subtotales (vista v_orden_total)
+        detalles:
+          type: array
+          items: { $ref: '#/components/schemas/DetalleCompra' }
+
+    EstadoEntrada:
+      type: string
+      enum: [DISPONIBLE, VENDIDA, USADA, CANCELADA]
+    Entrada:
+      type: object
+      required: [idEntrada, codigo, estado, idOrden, idTipoEntrada, idEvento]
+      properties:
+        idEntrada: { type: integer }
+        codigo: { type: string, format: uuid }
+        estado: { $ref: '#/components/schemas/EstadoEntrada' }
+        idOrden: { type: integer }
+        idTipoEntrada: { type: integer }
+        tipoEntrada: { type: string }
+        idEvento: { type: integer }
+        evento: { type: string }
+        asistente: { $ref: '#/components/schemas/Asistente' }
+    AsistenteEntrada:
+      type: object
+      required: [nombre, documento]
+      properties:
+        nombre: { type: string, minLength: 1, maxLength: 100 }
+        documento: { type: string, minLength: 1, maxLength: 30 }
+        correo: { type: string, format: email, maxLength: 150 }
+    Asistente:
+      allOf:
+        - $ref: '#/components/schemas/AsistenteEntrada'
+        - type: object
+          required: [idEntrada]
+          properties:
+            idEntrada:
+              type: integer
+              description: Identificador del asistente (compartido con su entrada)
+            fechaCheckin:
+              type: string
+              format: date-time
+              nullable: true
+
+    CheckinSolicitud:
+      type: object
+      required: [codigo]
+      properties:
+        codigo: { type: string, format: uuid }
+    CheckinRespuesta:
+      type: object
+      required: [idEntrada, estado, fechaCheckin]
+      properties:
+        idEntrada: { type: integer }
+        estado: { $ref: '#/components/schemas/EstadoEntrada' }
+        fechaCheckin: { type: string, format: date-time }
+
+    ResenaEntrada:
+      type: object
+      required: [calificacion]
+      properties:
+        calificacion: { type: integer, minimum: 1, maximum: 5 }
+        comentario: { type: string, maxLength: 2000 }
+    Resena:
+      allOf:
+        - $ref: '#/components/schemas/ResenaEntrada'
+        - type: object
+          required: [id, idEvento, idUsuario, nombreUsuario, fecha]
+          properties:
+            id: { type: string }
+            idEvento: { type: integer }
+            idUsuario: { type: integer }
+            nombreUsuario: { type: string }
+            fecha: { type: string, format: date-time }
+    ResumenResenas:
+      type: object
+      required: [idEvento, promedio, total]
+      properties:
+        idEvento: { type: integer }
+        promedio: { type: number, format: double, minimum: 0, maximum: 5 }
+        total: { type: integer, minimum: 0 }
+
+    PerfilArtistaEntrada:
+      type: object
+      properties:
+        biografia: { type: string }
+        redes:
+          type: object
+          additionalProperties: { type: string }
+          description: Nombre de la red social -> usuario o URL
+        enlaces:
+          type: array
+          items: { type: string }
+        galeria:
+          type: array
+          description: Rutas relativas de imágenes
+          items: { type: string, example: artistas/12/foto1.jpg }
+    PerfilArtista:
+      allOf:
+        - $ref: '#/components/schemas/PerfilArtistaEntrada'
+        - type: object
+          required: [idArtista]
+          properties:
+            idArtista: { type: integer }
+    DetalleEventoEntrada:
+      type: object
+      properties:
+        descripcion: { type: string }
+        etiquetas:
+          type: array
+          items: { type: string }
+        politicas: { type: string }
+        medios:
+          type: array
+          description: Rutas relativas de imágenes o videos
+          items: { type: string, example: eventos/5/cartel.jpg }
+    DetalleEvento:
+      allOf:
+        - $ref: '#/components/schemas/DetalleEventoEntrada'
+        - type: object
+          required: [idEvento]
+          properties:
+            idEvento: { type: integer }
+
+    Pagina:
+      type: object
+      required: [pagina, tamano, totalElementos, totalPaginas]
+      properties:
+        pagina: { type: integer }
+        tamano: { type: integer }
+        totalElementos: { type: integer, format: int64 }
+        totalPaginas: { type: integer }
+    PaginaArtistas:
+      allOf:
+        - $ref: '#/components/schemas/Pagina'
+        - type: object
+          required: [contenido]
+          properties:
+            contenido:
+              type: array
+              items: { $ref: '#/components/schemas/Artista' }
+    PaginaEscenarios:
+      allOf:
+        - $ref: '#/components/schemas/Pagina'
+        - type: object
+          required: [contenido]
+          properties:
+            contenido:
+              type: array
+              items: { $ref: '#/components/schemas/Escenario' }
+    PaginaEventos:
+      allOf:
+        - $ref: '#/components/schemas/Pagina'
+        - type: object
+          required: [contenido]
+          properties:
+            contenido:
+              type: array
+              items: { $ref: '#/components/schemas/Evento' }
+    PaginaOrdenes:
+      allOf:
+        - $ref: '#/components/schemas/Pagina'
+        - type: object
+          required: [contenido]
+          properties:
+            contenido:
+              type: array
+              items: { $ref: '#/components/schemas/Orden' }
+    PaginaEntradas:
+      allOf:
+        - $ref: '#/components/schemas/Pagina'
+        - type: object
+          required: [contenido]
+          properties:
+            contenido:
+              type: array
+              items: { $ref: '#/components/schemas/Entrada' }
+    PaginaResenas:
+      allOf:
+        - $ref: '#/components/schemas/Pagina'
+        - type: object
+          required: [contenido]
+          properties:
+            contenido:
+              type: array
+              items: { $ref: '#/components/schemas/Resena' }

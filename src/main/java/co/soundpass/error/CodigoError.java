@@ -1,0 +1,14 @@
+package co.soundpass.error;
+
+public enum CodigoError {
+    VALIDACION,
+    NO_AUTENTICADO,
+    PROHIBIDO,
+    NO_ENCONTRADO,
+    SOLAPAMIENTO_ESCENARIO,
+    ENTRADAS_AGOTADAS,
+    TRANSICION_INVALIDA,
+    CUPO_INSUFICIENTE,
+    DUPLICADO,
+    ERROR_INTERNO
+}

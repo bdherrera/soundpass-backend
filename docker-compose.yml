@@ -1,0 +1,56 @@
+# Aplicación + PostgreSQL 18 + MongoDB 8.0. Los valores por defecto son solo para desarrollo.
+name: soundpass
+
+services:
+  app:
+    build: .
+    image: soundpass-backend:local
+    ports:
+      - "8080:8080"
+    environment:
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      DB_NAME: ${DB_NAME:-soundpass}
+      DB_USER: ${DB_USER:-soundpass}
+      DB_PASSWORD: ${DB_PASSWORD:-soundpass_dev}
+      MONGO_URI: ${MONGO_URI:-mongodb://${DB_USER:-soundpass}:${DB_PASSWORD:-soundpass_dev}@mongo:27017/${DB_NAME:-soundpass}?authSource=admin}
+      JWT_SECRET: ${JWT_SECRET:-clave-solo-para-desarrollo-cambiar-en-despliegue-0123456789}
+      ADMIN_CORREO: ${ADMIN_CORREO:-}
+      ADMIN_CONTRASENA: ${ADMIN_CONTRASENA:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mongo:
+        condition: service_healthy
+
+  postgres:
+    image: postgres:18
+    environment:
+      POSTGRES_DB: ${DB_NAME:-soundpass}
+      POSTGRES_USER: ${DB_USER:-soundpass}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-soundpass_dev}
+    volumes:
+      - pgdata:/var/lib/postgresql
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+
+  mongo:
+    image: mongo:8.0
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${DB_USER:-soundpass}
+      MONGO_INITDB_ROOT_PASSWORD: ${DB_PASSWORD:-soundpass_dev}
+    volumes:
+      - mongodata:/data/db
+    healthcheck:
+      test: ["CMD-SHELL", "mongosh --quiet --eval \"db.adminCommand('ping').ok\" | grep -q 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+volumes:
+  pgdata:
+  mongodata:
