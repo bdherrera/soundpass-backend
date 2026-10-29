@@ -2,8 +2,8 @@ package co.soundpass.soporte;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 
-import co.soundpass.dominio.Rol;
-import co.soundpass.dominio.Usuario;
+import co.soundpass.modelo.Rol;
+import co.soundpass.modelo.Usuario;
 import co.soundpass.repositorio.UsuarioRepository;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;

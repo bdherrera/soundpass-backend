@@ -1,7 +1,7 @@
 package co.soundpass.repositorio;
 
-import co.soundpass.dominio.DetalleCompra;
-import co.soundpass.dominio.DetalleCompraId;
+import co.soundpass.modelo.DetalleCompra;
+import co.soundpass.modelo.DetalleCompraId;
 import java.util.Collection;
 import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;

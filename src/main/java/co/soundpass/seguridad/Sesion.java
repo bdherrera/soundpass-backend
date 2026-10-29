@@ -1,6 +1,7 @@
 package co.soundpass.seguridad;
 
-import co.soundpass.dominio.Rol;
+import co.soundpass.error.ApiException;
+import co.soundpass.modelo.Rol;
 import java.util.Optional;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -17,6 +18,11 @@ public final class Sesion {
             return Optional.of(u);
         }
         return Optional.empty();
+    }
+
+    /** Id del usuario autenticado; sin sesión, 401. */
+    public static Integer idUsuarioActual() {
+        return usuarioActual().orElseThrow(() -> ApiException.noAutenticado("Se requiere autenticación")).id();
     }
 
     public static boolean esAdmin() {

@@ -1,7 +1,7 @@
 package co.soundpass.servicio;
 
-import co.soundpass.dominio.Rol;
-import co.soundpass.dominio.Usuario;
+import co.soundpass.modelo.Rol;
+import co.soundpass.modelo.Usuario;
 import co.soundpass.repositorio.UsuarioRepository;
 import java.util.Locale;
 import org.springframework.beans.factory.annotation.Value;

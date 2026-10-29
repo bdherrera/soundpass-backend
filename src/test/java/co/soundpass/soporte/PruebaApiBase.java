@@ -5,10 +5,10 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import co.soundpass.dominio.Rol;
-import co.soundpass.dominio.Usuario;
-import co.soundpass.seguridad.JwtServicio;
+import co.soundpass.modelo.Rol;
+import co.soundpass.modelo.Usuario;
 import co.soundpass.repositorio.UsuarioRepository;
+import co.soundpass.seguridad.JwtServicio;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.OffsetDateTime;
@@ -59,10 +59,11 @@ public abstract class PruebaApiBase {
 
     @AfterEach
     void limpiarTablas() {
-        jdbc.execute("TRUNCATE asistente, entrada, detalle_compra, orden, evento_artista, tipo_entrada, "
-                + "evento, escenario, artista, usuario RESTART IDENTITY CASCADE");
+        jdbc.execute("TRUNCATE auditoria_estado, asistente, entrada, detalle_compra, orden, evento_artista, "
+                + "tipo_entrada, evento, escenario, artista, usuario RESTART IDENTITY CASCADE");
         try {
-            for (String coleccion : java.util.List.of("reseñas", "perfiles_artista", "detalle_evento")) {
+            for (String coleccion : java.util.List.of("reseñas", "perfiles_artista", "detalle_evento",
+                    "logs_aplicacion", "cola_evento", "turnos_cola")) {
                 mongo.getCollection(coleccion).deleteMany(new org.bson.Document());
             }
         } catch (RuntimeException e) {

@@ -1,7 +1,7 @@
 package co.soundpass.repositorio;
 
-import co.soundpass.dominio.EventoArtista;
-import co.soundpass.dominio.EventoArtistaId;
+import co.soundpass.modelo.EventoArtista;
+import co.soundpass.modelo.EventoArtistaId;
 import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;

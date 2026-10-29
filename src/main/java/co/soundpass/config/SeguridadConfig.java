@@ -42,6 +42,10 @@ public class SeguridadConfig {
                 .authorizeHttpRequests(a -> {
                     a.requestMatchers("/actuator/health", "/actuator/health/**").permitAll();
                     a.requestMatchers(HttpMethod.POST, "/api/v1/auth/registro", "/api/v1/auth/login").permitAll();
+                    a.requestMatchers(HttpMethod.GET, "/api/v1/eventos/*/ventas", "/api/v1/logs/**").hasRole("ADMIN");
+                    a.requestMatchers(HttpMethod.POST, "/api/v1/eventos/*/cola/turnos").authenticated();
+                    a.requestMatchers(HttpMethod.GET, "/api/v1/eventos/*/cola/turnos/mio").authenticated();
+                    a.requestMatchers(HttpMethod.DELETE, "/api/v1/eventos/*/cola/turnos/mio").authenticated();
                     a.requestMatchers(HttpMethod.GET,
                             "/api/v1/artistas/**", "/api/v1/escenarios/**", "/api/v1/eventos/**").permitAll();
                     a.requestMatchers(HttpMethod.POST, "/api/v1/eventos/*/resenas").authenticated();

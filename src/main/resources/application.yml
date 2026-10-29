@@ -19,6 +19,8 @@ spring:
       uri: ${MONGO_URI}
 
 soundpass:
+  logs:
+    retencion-dias: ${LOGS_RETENCION_DIAS:30}
   jwt:
     secreto: ${JWT_SECRET}
     expiracion-minutos: 60

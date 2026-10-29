@@ -1,6 +1,6 @@
 package co.soundpass.repositorio;
 
-import co.soundpass.dominio.Escenario;
+import co.soundpass.modelo.Escenario;
 import java.util.Optional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;

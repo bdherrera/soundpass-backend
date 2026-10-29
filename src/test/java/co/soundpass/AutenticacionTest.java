@@ -6,8 +6,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import co.soundpass.dominio.Rol;
-import co.soundpass.dominio.Usuario;
+import co.soundpass.modelo.Rol;
+import co.soundpass.modelo.Usuario;
 import co.soundpass.repositorio.UsuarioRepository;
 import co.soundpass.servicio.AdminInicial;
 import co.soundpass.soporte.ClienteApi;

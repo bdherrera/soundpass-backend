@@ -7,7 +7,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import co.soundpass.mongo.MongoEsquema;
+import co.soundpass.config.MongoEsquema;
 import co.soundpass.soporte.PruebaApiBase;
 import com.mongodb.MongoWriteException;
 import java.util.HashMap;

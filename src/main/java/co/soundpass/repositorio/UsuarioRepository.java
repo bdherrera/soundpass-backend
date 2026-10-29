@@ -1,6 +1,6 @@
 package co.soundpass.repositorio;
 
-import co.soundpass.dominio.Usuario;
+import co.soundpass.modelo.Usuario;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 

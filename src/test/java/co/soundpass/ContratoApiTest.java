@@ -79,7 +79,7 @@ class ContratoApiTest extends PruebaApiBase {
         var implementadas = new TreeSet<String>();
         mapeo.getHandlerMethods().forEach((info, handler) -> {
             if (handler.getBeanType().isAnnotationPresent(RestController.class)
-                    && handler.getBeanType().getPackageName().startsWith("co.soundpass.web")) {
+                    && handler.getBeanType().getPackageName().startsWith("co.soundpass.controlador")) {
                 for (var metodo : info.getMethodsCondition().getMethods()) {
                     for (String patron : info.getPathPatternsCondition().getPatternValues()) {
                         implementadas.add(metodo.asHttpMethod() + " " + normalizar(patron));
