@@ -35,6 +35,10 @@ tags:
     description: Ingreso al evento
   - name: Reseñas
     description: Reseñas de eventos (MongoDB)
+  - name: Cola de reserva
+    description: Cola virtual para entrar a comprar un evento (MongoDB, patrón Computed)
+  - name: Logs
+    description: Logs de la aplicación (MongoDB, patrón Bucket)
   - name: Perfiles y detalle
     description: Perfiles de artista y detalle de evento (MongoDB)
 
@@ -508,6 +512,158 @@ paths:
                 items: { $ref: '#/components/schemas/Disponibilidad' }
         '404': { $ref: '#/components/responses/NoEncontrado' }
 
+  /eventos/{idEvento}/ventas:
+    parameters:
+      - $ref: '#/components/parameters/IdEvento'
+    get:
+      tags: [Tipos de entrada]
+      operationId: resumenVentasEvento
+      summary: Reporte de ventas del evento por tipo de entrada
+      description: |
+        Calculado en la base de datos con la función fn_resumen_ventas_evento. `ingresos` suma solo las
+        órdenes PAGADA (las reembolsadas o canceladas no cuentan).
+      x-acceso: ADMIN
+      responses:
+        '200':
+          description: Ventas por tipo de entrada
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/ResumenVentas' }
+        '401': { $ref: '#/components/responses/NoAutenticado' }
+        '403': { $ref: '#/components/responses/Prohibido' }
+        '404': { $ref: '#/components/responses/NoEncontrado' }
+
+  /eventos/{idEvento}/cola:
+    parameters:
+      - $ref: '#/components/parameters/IdEvento'
+    get:
+      tags: [Cola de reserva]
+      operationId: estadoCola
+      summary: Estado de la cola de reserva del evento
+      description: |
+        `enEspera` y `enCompra` salen de contadores precalculados en MongoDB (patrón Computed), no de contar turnos.
+        Un evento sin cola configurada responde `habilitada: false`.
+      x-acceso: PUBLICO
+      security: []
+      responses:
+        '200':
+          description: Estado de la cola
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ColaEstado' }
+        '503': { $ref: '#/components/responses/NoDisponible' }
+    put:
+      tags: [Cola de reserva]
+      operationId: configurarCola
+      summary: Habilita, deshabilita o ajusta la cola de reserva del evento
+      description: |
+        Con la cola habilitada, para comprar entradas del evento hay que tener un turno ADMITIDO
+        (409 `COLA_REQUERIDA` si no). La cola está deshabilitada por defecto. Si MongoDB falla, la compra
+        se permite sin cola.
+      x-acceso: ADMIN
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ColaConfig' }
+      responses:
+        '200':
+          description: Cola configurada
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ColaEstado' }
+        '401': { $ref: '#/components/responses/NoAutenticado' }
+        '403': { $ref: '#/components/responses/Prohibido' }
+        '404': { $ref: '#/components/responses/NoEncontrado' }
+        '422': { $ref: '#/components/responses/Validacion' }
+        '503': { $ref: '#/components/responses/NoDisponible' }
+
+  /eventos/{idEvento}/cola/turnos:
+    parameters:
+      - $ref: '#/components/parameters/IdEvento'
+    post:
+      tags: [Cola de reserva]
+      operationId: unirseACola
+      summary: Entra a la cola de reserva del evento
+      description: |
+        Idempotente: si el usuario ya tiene un turno activo, lo devuelve. Responde 409 `COLA_INACTIVA` si el
+        evento no tiene cola habilitada.
+      x-acceso: USUARIO
+      responses:
+        '200':
+          description: Turno del usuario
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Turno' }
+        '401': { $ref: '#/components/responses/NoAutenticado' }
+        '409': { $ref: '#/components/responses/Conflicto' }
+        '503': { $ref: '#/components/responses/NoDisponible' }
+
+  /eventos/{idEvento}/cola/turnos/mio:
+    parameters:
+      - $ref: '#/components/parameters/IdEvento'
+    get:
+      tags: [Cola de reserva]
+      operationId: miTurno
+      summary: Consulta el turno del usuario (su posición y, si ya fue admitido, cuándo vence)
+      x-acceso: USUARIO
+      responses:
+        '200':
+          description: Turno del usuario
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Turno' }
+        '401': { $ref: '#/components/responses/NoAutenticado' }
+        '404': { $ref: '#/components/responses/NoEncontrado' }
+        '503': { $ref: '#/components/responses/NoDisponible' }
+    delete:
+      tags: [Cola de reserva]
+      operationId: salirDeCola
+      summary: Sale de la cola y libera su lugar
+      x-acceso: USUARIO
+      responses:
+        '204': { description: Turno cancelado }
+        '401': { $ref: '#/components/responses/NoAutenticado' }
+        '404': { $ref: '#/components/responses/NoEncontrado' }
+        '503': { $ref: '#/components/responses/NoDisponible' }
+
+  /logs:
+    get:
+      tags: [Logs]
+      operationId: consultarLogs
+      summary: Logs de la aplicación (más recientes primero)
+      description: |
+        Se guardan en MongoDB con el patrón Bucket: un documento por hora con hasta 100 entradas, que se borran
+        solos a los 30 días (TTL). Por omisión devuelve las últimas 24 horas.
+      x-acceso: ADMIN
+      parameters:
+        - name: nivel
+          in: query
+          schema: { type: string, enum: [ERROR, WARN, INFO] }
+        - name: desde
+          in: query
+          schema: { type: string, format: date-time }
+        - name: hasta
+          in: query
+          schema: { type: string, format: date-time }
+        - name: limite
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 200, default: 50 }
+      responses:
+        '200':
+          description: Entradas de log
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/LogEntrada' }
+        '401': { $ref: '#/components/responses/NoAutenticado' }
+        '403': { $ref: '#/components/responses/Prohibido' }
+        '422': { $ref: '#/components/responses/Validacion' }
+        '503': { $ref: '#/components/responses/NoDisponible' }
+
   /ordenes:
     post:
       tags: [Compras]
@@ -518,6 +674,9 @@ paths:
         `precioUnitario` y marca las entradas como VENDIDA. Si faltan entradas se revierte todo y responde 409.
         Repetir la misma `claveIdempotencia` devuelve la orden existente (200) sin consumir más entradas.
         Una orden no puede repetir el mismo tipo de entrada en dos líneas.
+        Si algún evento de la compra tiene cola de reserva habilitada, se exige un turno ADMITIDO
+        (409 `COLA_REQUERIDA`); una repetición idempotente no vuelve a pasar por la cola. Si MongoDB falla,
+        la cola se ignora y la compra sigue.
       x-acceso: USUARIO
       requestBody:
         required: true
@@ -897,7 +1056,8 @@ components:
       description: |
         Conflicto de negocio: solapamiento de escenario (`SOLAPAMIENTO_ESCENARIO`), entradas agotadas
         (`ENTRADAS_AGOTADAS`), transición de estado inválida (`TRANSICION_INVALIDA`), cupo menor que las
-        entradas vendidas (`CUPO_INSUFICIENTE`) o dato duplicado (`DUPLICADO`).
+        entradas vendidas (`CUPO_INSUFICIENTE`), cola de reserva sin turno admitido (`COLA_REQUERIDA`) o sin cola
+        habilitada (`COLA_INACTIVA`), o dato duplicado (`DUPLICADO`).
       content:
         application/json:
           schema: { $ref: '#/components/schemas/Error' }
@@ -924,6 +1084,8 @@ components:
             - ENTRADAS_AGOTADAS
             - TRANSICION_INVALIDA
             - CUPO_INSUFICIENTE
+            - COLA_INACTIVA
+            - COLA_REQUERIDA
             - DUPLICADO
             - ERROR_INTERNO
           example: SOLAPAMIENTO_ESCENARIO
@@ -1083,6 +1245,70 @@ components:
         cupo: { type: integer }
         disponibles: { type: integer, minimum: 0 }
 
+    ColaConfig:
+      type: object
+      required: [habilitada, ventana, ttlMinutos]
+      properties:
+        habilitada: { type: boolean }
+        ventana:
+          type: integer
+          minimum: 1
+          maximum: 1000
+          description: Personas que pueden estar comprando a la vez
+        ttlMinutos:
+          type: integer
+          minimum: 1
+          maximum: 120
+          description: Minutos que dura un turno admitido antes de vencer
+    ColaEstado:
+      type: object
+      required: [idEvento, habilitada, ventana, ttlMinutos, enEspera, enCompra]
+      properties:
+        idEvento: { type: integer }
+        habilitada: { type: boolean }
+        ventana: { type: integer }
+        ttlMinutos: { type: integer }
+        enEspera: { type: integer, format: int64, description: Turnos esperando ser admitidos }
+        enCompra: { type: integer, format: int64, description: Turnos admitidos que aún no terminan }
+    Turno:
+      type: object
+      required: [idEvento, turno, estado, posicion]
+      properties:
+        idEvento: { type: integer }
+        turno: { type: integer, format: int64 }
+        estado:
+          type: string
+          enum: [ESPERANDO, ADMITIDO, COMPLETADO, EXPIRADO, CANCELADO]
+        posicion:
+          type: integer
+          format: int64
+          description: Turnos que faltan para ser admitido; 0 si ya fue admitido o ya terminó
+        expiraEn:
+          type: string
+          format: date-time
+          nullable: true
+          description: Solo con estado ADMITIDO
+    LogEntrada:
+      type: object
+      required: [fecha, nivel, logger, mensaje]
+      properties:
+        fecha: { type: string, format: date-time }
+        nivel: { type: string, enum: [ERROR, WARN, INFO] }
+        logger: { type: string }
+        hilo: { type: string, nullable: true }
+        mensaje: { type: string }
+    ResumenVentas:
+      type: object
+      required: [idTipoEntrada, nombre, cupo, disponibles, vendidas, usadas, canceladas, ingresos]
+      properties:
+        idTipoEntrada: { type: integer }
+        nombre: { type: string }
+        cupo: { type: integer }
+        disponibles: { type: integer, format: int64 }
+        vendidas: { type: integer, format: int64 }
+        usadas: { type: integer, format: int64 }
+        canceladas: { type: integer, format: int64 }
+        ingresos: { type: number, format: decimal }
     LineaCompra:
       type: object
       required: [idTipoEntrada, cantidad]

@@ -25,6 +25,4 @@ replay_pid*
 
 # SoundPass backend
 .env
-.env.agente
-logs/
 target/
