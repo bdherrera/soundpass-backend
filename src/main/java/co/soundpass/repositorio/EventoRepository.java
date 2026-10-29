@@ -1,6 +1,6 @@
 package co.soundpass.repositorio;
 
-import co.soundpass.dominio.Evento;
+import co.soundpass.modelo.Evento;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 

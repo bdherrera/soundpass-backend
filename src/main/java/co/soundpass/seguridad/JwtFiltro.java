@@ -16,6 +16,9 @@ import org.springframework.web.filter.OncePerRequestFilter;
 @Component
 public class JwtFiltro extends OncePerRequestFilter {
 
+    /** Atributo de la solicitud con el id del usuario autenticado; lo lee el log de accesos. */
+    public static final String ATRIBUTO_USUARIO = "soundpass.usuario";
+
     private static final String PREFIJO = "Bearer ";
 
     private final JwtServicio jwt;
@@ -33,6 +36,7 @@ public class JwtFiltro extends OncePerRequestFilter {
                 var autenticacion = new UsernamePasswordAuthenticationToken(u, null,
                         List.of(new SimpleGrantedAuthority("ROLE_" + u.rol().name())));
                 SecurityContextHolder.getContext().setAuthentication(autenticacion);
+                request.setAttribute(ATRIBUTO_USUARIO, u.id());
             });
         }
         chain.doFilter(request, response);

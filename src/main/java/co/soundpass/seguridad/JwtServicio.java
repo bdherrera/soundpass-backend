@@ -1,7 +1,7 @@
 package co.soundpass.seguridad;
 
-import co.soundpass.dominio.Rol;
-import co.soundpass.dominio.Usuario;
+import co.soundpass.modelo.Rol;
+import co.soundpass.modelo.Usuario;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;

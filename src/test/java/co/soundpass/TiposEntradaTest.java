@@ -31,9 +31,13 @@ class TiposEntradaTest extends PruebaApiBase {
         int idUsuario = jdbc.queryForObject("select id_usuario from usuario limit 1", Integer.class);
         int idOrden = jdbc.queryForObject("insert into orden (id_usuario, clave_idempotencia) values (?, ?) "
                 + "returning id_orden", Integer.class, idUsuario, unico("clave"));
-        jdbc.update("update entrada set estado = ?, id_orden = ? where id_entrada in "
-                + "(select id_entrada from entrada where id_tipo_entrada = ? and estado = 'DISPONIBLE' "
-                + "order by id_entrada limit ?)", estado, idOrden, idTipo, n);
+        for (Integer id : jdbc.queryForList("select id_entrada from entrada where id_tipo_entrada = ? "
+                + "and estado = 'DISPONIBLE' order by id_entrada limit ?", Integer.class, idTipo, n)) {
+            jdbc.update("update entrada set estado = 'VENDIDA', id_orden = ? where id_entrada = ?", idOrden, id);
+            if (estado.equals("USADA")) {
+                jdbc.update("update entrada set estado = 'USADA' where id_entrada = ?", id);
+            }
+        }
     }
 
     private org.springframework.test.web.servlet.ResultActions actualizar(int idTipo, String token, Object cuerpo)

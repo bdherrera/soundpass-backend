@@ -66,4 +66,25 @@ class MongoCaidoTest extends PruebaApiBase {
                 .andExpect(status().isServiceUnavailable());
         assertThat(contar("select count(*) from orden")).isEqualTo(1);
     }
+
+    @Test
+    void laColaYLosLogsRespondenConUn503PeroLaCompraSigueSinCola() throws Exception {
+        int evento = eventoPublicado().get("idEvento").asInt();
+        int tipo = crearTipoEntrada(evento, "General", "100.00", 5).get("idTipoEntrada").asInt();
+        Sesion ana = nuevaSesion();
+        String cola = "/api/v1/eventos/" + evento + "/cola";
+
+        mvc.perform(get(cola)).andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.estado").value(503));
+        mvc.perform(put(cola).header("Authorization", admin).contentType(MediaType.APPLICATION_JSON)
+                        .content(json(Map.of("habilitada", true, "ventana", 5, "ttlMinutos", 15))))
+                .andExpect(status().isServiceUnavailable());
+        mvc.perform(post(cola + "/turnos").header("Authorization", ana.bearer()))
+                .andExpect(status().isServiceUnavailable());
+        mvc.perform(get("/api/v1/logs").header("Authorization", admin)).andExpect(status().isServiceUnavailable());
+
+        // la verificación de la cola falla de forma abierta: la compra no depende de MongoDB
+        comprar(ana.bearer(), "sin-cola-1", linea(tipo, 1)).andExpect(status().isCreated());
+        assertThat(contar("select count(*) from orden")).isEqualTo(1);
+    }
 }
