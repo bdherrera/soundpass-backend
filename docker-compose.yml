@@ -17,6 +17,7 @@ services:
       JWT_SECRET: ${JWT_SECRET:-clave-solo-para-desarrollo-cambiar-en-despliegue-0123456789}
       ADMIN_CORREO: ${ADMIN_CORREO:-}
       ADMIN_CONTRASENA: ${ADMIN_CONTRASENA:-}
+      LOGS_RETENCION_DIAS: ${LOGS_RETENCION_DIAS:-30}
     depends_on:
       postgres:
         condition: service_healthy
