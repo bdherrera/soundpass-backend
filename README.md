@@ -42,6 +42,24 @@ Ninguna se escribe en el código ni en `application.yml`. Están listadas en [`.
 
 Los valores por defecto del `docker-compose.yml` son solo para desarrollo. En un despliegue real define todos, sobre todo `JWT_SECRET` y las claves de las bases de datos.
 
+### Despliegue en máquinas virtuales
+
+`docker-compose.vm.yml` reparte el despliegue por perfiles: cada VM levanta solo lo que le toca. No usa los contenedores del `docker-compose.yml`. Las variables son obligatorias y van en un archivo `.env.vm` (ignorado por git, nunca se versiona).
+
+- **VM de la base relacional** (perfil `db`): `postgres:18` con el puerto 5432 publicado (acótalo con `PG_BIND` y el firewall) y `db/init` montado; el esquema y la lógica (`01` y `02`) se aplican solo al crear el volumen.
+
+```bash
+docker compose -f docker-compose.vm.yml --env-file .env.vm --profile db up -d
+```
+
+- **VM de la aplicación** (perfil `app`): solo la aplicación, conectada a ese PostgreSQL (`DB_HOST`) y al MongoDB que ya existe (`MONGO_URI`).
+
+```bash
+docker compose -f docker-compose.vm.yml --env-file .env.vm --profile app up --build -d
+```
+
+Si usas un PostgreSQL que ya existe, aplica en él `db/init/01_esquema.sql` y luego `db/init/02_logica_en_base_de_datos.sql` (Docker solo los ejecuta en una base nueva). Los validadores e índices de MongoDB los crea la aplicación al arrancar. No corras las pruebas contra esas bases: vacían las tablas.
+
 ## Lógica en la base de datos (PostgreSQL)
 
 `db/init/02_logica_en_base_de_datos.sql` se ejecuta después del esquema al crear la base de datos y contiene:
