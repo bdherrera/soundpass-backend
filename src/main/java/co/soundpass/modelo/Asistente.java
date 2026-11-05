@@ -18,6 +18,7 @@ public class Asistente {
     private Entrada entrada;
 
     private String nombre;
+    private String apellido;
     private String documento;
     private String correo;
     private OffsetDateTime fechaCheckin;
@@ -27,6 +28,8 @@ public class Asistente {
     public void setEntrada(Entrada entrada) { this.entrada = entrada; }
     public String getNombre() { return nombre; }
     public void setNombre(String nombre) { this.nombre = nombre; }
+    public String getApellido() { return apellido; }
+    public void setApellido(String apellido) { this.apellido = apellido; }
     public String getDocumento() { return documento; }
     public void setDocumento(String documento) { this.documento = documento; }
     public String getCorreo() { return correo; }

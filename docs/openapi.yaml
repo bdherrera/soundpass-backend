@@ -1110,9 +1110,10 @@ components:
 
     RegistroSolicitud:
       type: object
-      required: [nombre, correo, contrasena]
+      required: [nombre, apellido, correo, contrasena]
       properties:
         nombre: { type: string, minLength: 1, maxLength: 100 }
+        apellido: { type: string, minLength: 1, maxLength: 100 }
         correo: { type: string, format: email, maxLength: 150 }
         contrasena: { type: string, format: password, minLength: 8, maxLength: 72 }
     LoginSolicitud:
@@ -1131,10 +1132,11 @@ components:
         usuario: { $ref: '#/components/schemas/Usuario' }
     Usuario:
       type: object
-      required: [idUsuario, nombre, correo, rol]
+      required: [idUsuario, nombre, apellido, correo, rol]
       properties:
         idUsuario: { type: integer }
         nombre: { type: string }
+        apellido: { type: string }
         correo: { type: string, format: email }
         rol: { type: string, enum: [USUARIO, ADMIN] }
 
@@ -1382,9 +1384,10 @@ components:
         asistente: { $ref: '#/components/schemas/Asistente' }
     AsistenteEntrada:
       type: object
-      required: [nombre, documento]
+      required: [nombre, apellido, documento]
       properties:
         nombre: { type: string, minLength: 1, maxLength: 100 }
+        apellido: { type: string, minLength: 1, maxLength: 100 }
         documento: { type: string, minLength: 1, maxLength: 30 }
         correo: { type: string, format: email, maxLength: 150 }
     Asistente:

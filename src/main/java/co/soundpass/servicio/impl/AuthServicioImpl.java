@@ -38,6 +38,7 @@ public class AuthServicioImpl implements AuthServicio {
         }
         Usuario usuario = new Usuario();
         usuario.setNombre(solicitud.nombre().trim());
+        usuario.setApellido(solicitud.apellido().trim());
         usuario.setCorreo(correo);
         usuario.setContrasenaHash(encoder.encode(solicitud.contrasena()));
         usuario.setRol(Rol.USUARIO);

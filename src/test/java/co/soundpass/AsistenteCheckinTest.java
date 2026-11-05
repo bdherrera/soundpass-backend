@@ -39,6 +39,7 @@ class AsistenteCheckinTest extends PruebaApiBase {
     private static Map<String, Object> asistente(String nombre, String documento, String correo) {
         Map<String, Object> datos = new HashMap<>();
         datos.put("nombre", nombre);
+        datos.put("apellido", "Prueba");
         datos.put("documento", documento);
         datos.put("correo", correo);
         return datos;

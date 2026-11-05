@@ -42,7 +42,7 @@ class AutenticacionTest {
     }
 
     private static String registro(String correo, String clave) {
-        return "{\"nombre\":\"Ana\",\"correo\":\"" + correo + "\",\"contrasena\":\"" + clave + "\"}";
+        return "{\"nombre\":\"Ana\",\"apellido\":\"Pérez\",\"correo\":\"" + correo + "\",\"contrasena\":\"" + clave + "\"}";
     }
 
     private static String login(String correo, String clave) {
@@ -63,6 +63,18 @@ class AutenticacionTest {
         assertThat(cuerpo).doesNotContain("hash").doesNotContain("contrasena").doesNotContain("$2");
         Usuario guardado = usuarios.findByCorreo(correo).orElseThrow();
         assertThat(guardado.getContrasenaHash()).startsWith("$2").isNotEqualTo("Clave-segura-1");
+        assertThat(guardado.getNombre()).isEqualTo("Ana");
+        assertThat(guardado.getApellido()).isEqualTo("Pérez");
+    }
+
+    @Test
+    void registroSinApellidoDevuelve422() throws Exception {
+        String cuerpo = "{\"nombre\":\"Ana\",\"correo\":\"" + UUID.randomUUID()
+                + "@prueba.co\",\"contrasena\":\"Clave-segura-1\"}";
+        mvc.perform(post("/api/v1/auth/registro").contentType(MediaType.APPLICATION_JSON).content(cuerpo))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.codigo").value("VALIDACION"))
+                .andExpect(jsonPath("$.detalles[0].campo").value("apellido"));
     }
 
     @Test

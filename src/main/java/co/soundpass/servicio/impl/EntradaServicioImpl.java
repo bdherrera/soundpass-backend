@@ -64,6 +64,7 @@ public class EntradaServicioImpl implements EntradaServicio {
         Asistente asistente = new Asistente();
         asistente.setEntrada(entrada);
         asistente.setNombre(datos.nombre().trim());
+        asistente.setApellido(datos.apellido().trim());
         asistente.setDocumento(datos.documento().trim());
         asistente.setCorreo(datos.correo() == null || datos.correo().isBlank() ? null : datos.correo().trim());
         return AsistenteDto.de(asistentes.saveAndFlush(asistente));

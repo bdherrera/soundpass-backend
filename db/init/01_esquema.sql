@@ -9,6 +9,8 @@ Cambios:     20261021- se ajustó el script para crear el esquema inicial con
              20261021- se ajustó el script para usar clave primaria compuesta
              (id_orden, id_tipo_entrada) en detalle_compra y clave primaria
              compartida (id_entrada) en asistente.
+             20261104- se separó el nombre en nombre y apellido en usuario y
+             en asistente.
 */
 
 CREATE EXTENSION IF NOT EXISTS btree_gist;
@@ -19,6 +21,7 @@ CREATE EXTENSION IF NOT EXISTS btree_gist;
 CREATE TABLE usuario (
     id_usuario       INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     nombre           VARCHAR(100) NOT NULL,
+    apellido         VARCHAR(100) NOT NULL,
     correo           VARCHAR(150) NOT NULL,
     contrasena_hash  VARCHAR(255) NOT NULL,
     rol              VARCHAR(10)  NOT NULL DEFAULT 'USUARIO',
@@ -173,6 +176,7 @@ CREATE TABLE entrada (
 CREATE TABLE asistente (
     id_entrada       INTEGER      NOT NULL,
     nombre           VARCHAR(100) NOT NULL,
+    apellido         VARCHAR(100) NOT NULL,
     documento        VARCHAR(30)  NOT NULL,
     correo           VARCHAR(150),
     fecha_checkin    TIMESTAMPTZ,

@@ -10,6 +10,7 @@ import co.soundpass.error.ApiException;
 import co.soundpass.error.CodigoError;
 import co.soundpass.modelo.EstadoEntrada;
 import co.soundpass.modelo.Resena;
+import co.soundpass.modelo.Usuario;
 import co.soundpass.repositorio.EntradaRepository;
 import co.soundpass.repositorio.EventoRepository;
 import co.soundpass.repositorio.UsuarioRepository;
@@ -59,7 +60,8 @@ public class ResenaServicioImpl implements ResenaServicio {
         if (!entradas.existsByEstadoAndOrdenUsuarioIdAndTipoEntradaEventoId(EstadoEntrada.USADA, idUsuario, idEvento)) {
             throw ApiException.prohibido("Solo puedes reseñar eventos a los que asististe (entrada USADA)");
         }
-        String nombre = usuarios.findById(idUsuario).orElseThrow().getNombre();
+        Usuario autor = usuarios.findById(idUsuario).orElseThrow();
+        String nombre = autor.getNombre() + " " + autor.getApellido();
         String comentario = datos.comentario() == null || datos.comentario().isBlank() ? null : datos.comentario().trim();
 
         esquema.asegurarListo();

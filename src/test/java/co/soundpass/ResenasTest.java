@@ -82,7 +82,7 @@ class ResenasTest extends PruebaApiBase {
                 .andExpect(jsonPath("$.id").isNotEmpty())
                 .andExpect(jsonPath("$.idEvento").value(evento))
                 .andExpect(jsonPath("$.idUsuario").value(ana.usuario().getId()))
-                .andExpect(jsonPath("$.nombreUsuario").value(ana.usuario().getNombre()))
+                .andExpect(jsonPath("$.nombreUsuario").value(nombreCompleto(ana.usuario())))
                 .andExpect(jsonPath("$.calificacion").value(4))
                 .andExpect(jsonPath("$.comentario").value("Muy buen concierto"))
                 .andExpect(jsonPath("$.fecha").isNotEmpty());
@@ -90,8 +90,13 @@ class ResenasTest extends PruebaApiBase {
         Document guardado = mongo.getCollection(MongoEsquema.RESENAS).find().first();
         assertThat(guardado.getInteger("id_evento")).isEqualTo(evento);
         assertThat(guardado.getInteger("version_esquema")).isEqualTo(1);
-        assertThat(guardado.get("usuario", Document.class).getString("nombre")).isEqualTo(ana.usuario().getNombre());
+        assertThat(guardado.get("usuario", Document.class).getString("nombre"))
+                .isEqualTo(nombreCompleto(ana.usuario()));
         assertThat(guardado.get("fecha")).isInstanceOf(Date.class);
+    }
+
+    private static String nombreCompleto(co.soundpass.modelo.Usuario u) {
+        return u.getNombre() + " " + u.getApellido();
     }
 
     @Test

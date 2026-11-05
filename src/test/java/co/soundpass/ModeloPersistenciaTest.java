@@ -42,6 +42,7 @@ class ModeloPersistenciaTest {
     private Usuario usuario() {
         Usuario u = new Usuario();
         u.setNombre("Ana");
+        u.setApellido("Pérez");
         u.setCorreo(UUID.randomUUID() + "@prueba.co");
         u.setContrasenaHash("hash");
         return usuarios.saveAndFlush(u);
@@ -156,6 +157,7 @@ class ModeloPersistenciaTest {
         Asistente as = new Asistente();
         as.setEntrada(en);
         as.setNombre("Luis");
+        as.setApellido("Gómez");
         as.setDocumento("123");
         asistentes.saveAndFlush(as);
         em.clear();

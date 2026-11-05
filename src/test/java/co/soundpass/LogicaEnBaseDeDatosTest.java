@@ -107,9 +107,11 @@ class LogicaEnBaseDeDatosTest extends PruebaApiBase {
         int vendida = entrada("VENDIDA");
 
         falla("SP409", () -> jdbc.update(
-                "insert into asistente (id_entrada, nombre, documento) values (?, 'Ana', '1')", disponible));
+                "insert into asistente (id_entrada, nombre, apellido, documento) values (?, 'Ana', 'Pérez', '1')",
+                disponible));
         assertThat(jdbc.update(
-                "insert into asistente (id_entrada, nombre, documento) values (?, 'Ana', '1')", vendida)).isEqualTo(1);
+                "insert into asistente (id_entrada, nombre, apellido, documento) values (?, 'Ana', 'Pérez', '1')",
+                vendida)).isEqualTo(1);
     }
 
     @Test
@@ -140,7 +142,7 @@ class LogicaEnBaseDeDatosTest extends PruebaApiBase {
         JsonNode entrada = cuerpo(entradasMias(ana.bearer(), "estado", "VENDIDA")).get("contenido").get(0);
         mvc.perform(put("/api/v1/entradas/" + entrada.get("idEntrada").asInt() + "/asistente")
                         .header("Authorization", ana.bearer()).contentType(MediaType.APPLICATION_JSON)
-                        .content(json(Map.of("nombre", "Luisa", "documento", "9"))))
+                        .content(json(Map.of("nombre", "Luisa", "apellido", "Gómez", "documento", "9"))))
                 .andExpect(status().isCreated());
         mvc.perform(post("/api/v1/checkins").header("Authorization", admin).contentType(MediaType.APPLICATION_JSON)
                         .content(json(Map.of("codigo", entrada.get("codigo").asText()))))

@@ -33,6 +33,7 @@ public class ClienteApi {
     public Usuario crearUsuario(Rol rol) {
         Usuario u = new Usuario();
         u.setNombre("Usuario " + rol);
+        u.setApellido("Prueba");
         u.setCorreo(UUID.randomUUID() + "@prueba.co");
         u.setContrasenaHash(encoder.encode(CLAVE));
         u.setRol(rol);

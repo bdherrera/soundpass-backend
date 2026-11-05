@@ -39,6 +39,7 @@ public class AdminInicial implements ApplicationRunner {
         }
         Usuario admin = new Usuario();
         admin.setNombre("Administrador");
+        admin.setApellido("SoundPass");
         admin.setCorreo(normalizado);
         admin.setContrasenaHash(encoder.encode(contrasena));
         admin.setRol(Rol.ADMIN);
