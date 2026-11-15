@@ -1,0 +1,50 @@
+# Despliegue en máquinas virtuales: cada VM levanta solo lo que le toca, según el perfil.
+#   VM de la base relacional:  docker compose -f docker-compose.vm.yml --env-file .env.vm --profile db up -d
+#   VM de la aplicación:       docker compose -f docker-compose.vm.yml --env-file .env.vm --profile app up --build -d
+# MongoDB no está aquí: la aplicación se conecta al que ya existe en su VM (MONGO_URI).
+# Las variables obligatorias no tienen valores por defecto y se leen de .env.vm (no versionado).
+# Perfil db: db/init (01 esquema y 02 lógica) se ejecuta solo la primera vez que se crea el volumen.
+# Restringe el acceso al 5432 con el firewall de la VM; PG_BIND acepta la IP de la interfaz a escuchar.
+name: soundpass-vm
+
+services:
+  postgres:
+    profiles: ["db"]
+    image: postgres:18
+    ports:
+      - "${PG_BIND:-0.0.0.0}:5432:5432"
+    environment:
+      POSTGRES_DB: ${DB_NAME:?Define DB_NAME}
+      POSTGRES_USER: ${DB_USER:?Define DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Define DB_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+    restart: unless-stopped
+
+  app:
+    profiles: ["app"]
+    build: .
+    image: soundpass-backend:local
+    ports:
+      - "8080:8080"
+    environment:
+      DB_HOST: ${DB_HOST:?Define DB_HOST (IP o nombre del PostgreSQL)}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_NAME: ${DB_NAME:?Define DB_NAME}
+      DB_USER: ${DB_USER:?Define DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD:?Define DB_PASSWORD}
+      MONGO_URI: ${MONGO_URI:?Define MONGO_URI}
+      JWT_SECRET: ${JWT_SECRET:?Define JWT_SECRET (mínimo 32 caracteres)}
+      ADMIN_CORREO: ${ADMIN_CORREO:-}
+      ADMIN_CONTRASENA: ${ADMIN_CONTRASENA:-}
+      LOGS_RETENCION_DIAS: ${LOGS_RETENCION_DIAS:-30}
+    restart: unless-stopped
+
+volumes:
+  pgdata:

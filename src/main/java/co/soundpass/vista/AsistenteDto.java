@@ -1,0 +1,14 @@
+package co.soundpass.vista;
+
+import co.soundpass.modelo.Asistente;
+import java.time.OffsetDateTime;
+
+/** El asistente se identifica por el id de su entrada. */
+public record AsistenteDto(Integer idEntrada, String nombre, String apellido, String documento, String correo,
+                           OffsetDateTime fechaCheckin) {
+
+    public static AsistenteDto de(Asistente a) {
+        return new AsistenteDto(a.getId(), a.getNombre(), a.getApellido(), a.getDocumento(), a.getCorreo(),
+                a.getFechaCheckin());
+    }
+}
